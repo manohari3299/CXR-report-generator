@@ -177,7 +177,7 @@ export default function About() {
                 className="text-center py-8 border-t border-white/10"
             >
                 <p className="text-gray-500 text-sm">
-                    © 2026 Major Project | Built with React, TypeScript, and TailwindCSS
+                    © Xray Report Generator | Built with React, TypeScript, and TailwindCSS
                 </p>
                 <div className="flex items-center justify-center gap-4 mt-4">
                     <a href="#" className="text-gray-400 hover:text-white transition-colors">
