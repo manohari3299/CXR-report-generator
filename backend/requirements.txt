@@ -1,0 +1,20 @@
+# CXR Report Generator — Runtime Dependencies
+# Python 3.11 recommended
+
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9
+python-dotenv==1.0.0
+
+# PyTorch (CUDA 11.8 — change if needed for your environment)
+torch==2.7.1+cu118
+torchvision==0.22.1+cu118
+torchxrayvision==1.4.0
+
+# ML & Data
+faiss-cpu==1.13.2
+numpy==2.4.3
+Pillow==12.1.1
+
+# Gemini API
+google-genai==1.68.0
