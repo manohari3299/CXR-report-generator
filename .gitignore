@@ -1,5 +1,56 @@
+# ========================
+# Python
+# ========================
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+.env
+
+# ========================
+# Model & Data Artifacts
+# ========================
+*.pt
+*.pth
+*.safetensors
+*.npy
+*.index
+*.zip
+
+# Large metadata files
+backend/model/*.pt
+backend/index/*
+!backend/model/.gitkeep
+!backend/index/.gitkeep
+
+# ========================
+# Node.js
+# ========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# ========================
+# IDE & OS
+# ========================
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+
+# ========================
 # Logs
-logs
+# ========================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,18 +58,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# ========================
+# Old project directories (to be removed)
+# ========================
+ChestXrayReportGenerator-main/
+models/
+index/
