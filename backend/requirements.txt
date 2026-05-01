@@ -18,3 +18,8 @@ Pillow==12.1.1
 
 # Gemini API
 google-genai==1.68.0
+google-auth
+supabase
+passlib[bcrypt]
+PyJWT
+

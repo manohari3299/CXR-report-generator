@@ -12,6 +12,7 @@ from PIL import Image
 import io
 
 from .pipeline import process_image
+from .auth import router as auth_router
 
 # =========================
 # APP SETUP
@@ -35,6 +36,8 @@ app.add_middleware(
 # =========================
 # ENDPOINTS
 # =========================
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+
 @app.get("/health")
 async def health_check():
     """Server health check endpoint."""
