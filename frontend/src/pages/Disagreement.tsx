@@ -71,7 +71,7 @@ export default function Disagreement() {
 
     const evidence = result?.evidence || [];
 
-    const { kept, pruned, stats } = useMemo(() => {
+    const { pruned, stats } = useMemo(() => {
         const keptCases: EvidenceCase[] = [];
         const prunedCases: EvidenceCase[] = [];
 

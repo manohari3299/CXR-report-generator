@@ -17,17 +17,19 @@ export interface HistoryEntry {
   id: string;
   timestamp: string;
   result: PredictResponse;
+  imageUrl?: string;
 }
 
 interface AnalysisContextType {
   result: PredictResponse | null;
-  setResult: (result: PredictResponse | null) => void;
+  setResult: (result: PredictResponse | null, imageUrl?: string) => void;
   clearResult: () => void;
   isAnalyzing: boolean;
   setIsAnalyzing: (v: boolean) => void;
   history: HistoryEntry[];
   loadFromHistory: (id: string) => void;
   deleteFromHistory: (id: string) => void;
+  currentImageUrl: string | null;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | undefined>(undefined);
@@ -66,6 +68,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const [result, setResultState] = useState<PredictResponse | null>(loadSession);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
   // Persist current result to sessionStorage whenever it changes
   useEffect(() => {
@@ -77,14 +80,15 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     saveHistory(history);
   }, [history]);
 
-  const setResult = (newResult: PredictResponse | null) => {
+  const setResult = (newResult: PredictResponse | null, imageUrl?: string) => {
     setResultState(newResult);
-    // If setting a new non-null result, also save to history
+    if (imageUrl) setCurrentImageUrl(imageUrl);
     if (newResult) {
       const entry: HistoryEntry = {
         id: `analysis_${Date.now()}`,
         timestamp: new Date().toISOString(),
         result: newResult,
+        imageUrl: imageUrl || undefined,
       };
       setHistory(prev => [entry, ...prev].slice(0, MAX_HISTORY));
     }
@@ -92,6 +96,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
 
   const clearResult = () => {
     setResultState(null);
+    setCurrentImageUrl(null);
     saveSession(null);
   };
 
@@ -99,6 +104,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     const entry = history.find(h => h.id === id);
     if (entry) {
       setResultState(entry.result);
+      setCurrentImageUrl(entry.imageUrl || null);
     }
   };
 
@@ -110,7 +116,8 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     <AnalysisContext.Provider value={{
       result, setResult, clearResult,
       isAnalyzing, setIsAnalyzing,
-      history, loadFromHistory, deleteFromHistory
+      history, loadFromHistory, deleteFromHistory,
+      currentImageUrl
     }}>
       {children}
     </AnalysisContext.Provider>

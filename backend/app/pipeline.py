@@ -35,6 +35,8 @@ TTA_ENABLED = os.getenv('TTA_ENABLED', 'true').lower() == 'true'
 CNN_WEIGHT = float(os.getenv('CNN_WEIGHT', '0.85'))
 EVIDENCE_WEIGHT = float(os.getenv('EVIDENCE_WEIGHT', '0.15'))
 SECONDARY_THRESHOLD = float(os.getenv('SECONDARY_THRESHOLD', '0.3'))
+FAISS_SIMILARITY_THRESHOLD = float(os.getenv('FAISS_SIMILARITY_THRESHOLD', '0.55'))
+ENTROPY_THRESHOLD = float(os.getenv('ENTROPY_THRESHOLD', '1.8'))
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -74,19 +76,39 @@ print(f"[Pipeline] Config — Temperature: {TEMPERATURE}, TTA: {TTA_ENABLED}, "
 # Disease keywords used for voting
 KEYWORDS = ["pneumonia", "effusion", "pneumothorax", "cardiomegaly", "atelectasis", "edema"]
 
+KEYWORD_SYNONYMS = {
+    "pneumonia": ["pneumonia", "consolidation", "infiltrate", "airspace opacity", "airspace disease"],
+    "effusion": ["effusion", "pleural fluid", "layering fluid", "meniscus sign"],
+    "pneumothorax": ["pneumothorax", "collapsed lung", "lung collapse"],
+    "cardiomegaly": ["cardiomegaly", "enlarged heart", "cardiac enlargement", "heart is enlarged",
+                     "cardiac silhouette is enlarged", "heart size is enlarged", "enlarged cardiac silhouette"],
+    "atelectasis": ["atelectasis", "volume loss", "linear opacity", "subsegmental"],
+    "edema": ["edema", "pulmonary congestion", "vascular congestion", "cephalization",
+              "interstitial thickening", "kerley"],
+}
+
+NEGATION_PATTERNS = [
+    'no ', 'without ', 'not ', 'no evidence of ', 'absence of ',
+    'negative for ', 'unremarkable', 'resolved', 'has cleared',
+    'have cleared', 'has resolved', 'have resolved', 'improving',
+    'no definite ', 'no acute ', 'no significant ',
+]
+
 def is_keyword_present(keyword: str, text: str) -> bool:
-    """Check if a keyword is present and NOT negated in the text."""
-    if keyword not in text:
-        return False
-    
-    # Simple negation window check
-    parts = text.split(keyword)
-    for i in range(len(parts) - 1):
-        before = parts[i][-50:]  # Look at 50 chars before the keyword
-        # Check common negation patterns
-        if any(neg in before for neg in ['no ', 'without ', 'not ', 'no pleural ', 'no evidence of ']):
+    """Check if a keyword (or any of its synonyms) is present and NOT negated."""
+    synonyms = KEYWORD_SYNONYMS.get(keyword, [keyword])
+    for term in synonyms:
+        if term not in text:
             continue
-        return True # Found a non-negated instance
+        parts = text.split(term)
+        for i in range(len(parts) - 1):
+            before = parts[i][-60:]
+            if any(neg in before for neg in NEGATION_PATTERNS):
+                continue
+            after = text[text.index(term) + len(term):text.index(term) + len(term) + 30]
+            if any(neg in after for neg in [' resolved', ' cleared', ' has improved', ' improving']):
+                continue
+            return True
     return False
 
 
@@ -171,6 +193,24 @@ def process_image(image: Image.Image) -> dict:
     D, I = index.search(emb, TOP_K)
     distances = D[0]
 
+    # ---------------------------------------------------
+    # Step 5b: Image validation — reject non-chest-X-ray images
+    # ---------------------------------------------------
+    avg_similarity = float(np.mean(distances))
+    entropy = -float(np.sum(softmax_probs * np.log(softmax_probs + 1e-9)))
+    print(f"[Pipeline] Validation — avg FAISS similarity: {avg_similarity:.4f}, softmax entropy: {entropy:.4f}")
+
+    if avg_similarity < FAISS_SIMILARITY_THRESHOLD:
+        raise ValueError(
+            "The uploaded image does not appear to be a chest X-ray. "
+            f"Similarity to known X-rays is too low ({avg_similarity:.2f})."
+        )
+    if entropy > ENTROPY_THRESHOLD:
+        raise ValueError(
+            "The uploaded image does not appear to be a chest X-ray. "
+            "The model could not identify any clear pathology pattern."
+        )
+
     # Build evidence cases with full metadata
     reports = []
     evidence_cases = []
@@ -186,15 +226,31 @@ def process_image(image: Image.Image) -> dict:
             sim = min(max(float(dist), 0.0), 1.0)
             weight = sim
 
-            # Detect label from report content
-            detected_label = "Unknown"
+            # Detect label from report content — find all mentioned keywords,
+            # count synonym matches per disease, pick the one with most evidence
             report_lower = report_text.lower()
+            found_keywords = {}
             for kw in KEYWORDS:
-                if is_keyword_present(kw, report_lower):
-                    detected_label = kw.capitalize()
-                    break
-            if detected_label == "Unknown" and ("normal" in report_lower or "no acute" in report_lower or "clear" in report_lower):
+                synonyms = KEYWORD_SYNONYMS.get(kw, [kw])
+                total_count = 0
+                earliest_pos = len(report_lower)
+                for syn in synonyms:
+                    if syn in report_lower and is_keyword_present(kw, report_lower):
+                        total_count += report_lower.count(syn)
+                        earliest_pos = min(earliest_pos, report_lower.index(syn))
+                if total_count > 0:
+                    found_keywords[kw] = (total_count, -earliest_pos)
+
+            if found_keywords:
+                detected_label = max(found_keywords, key=lambda k: found_keywords[k]).capitalize()
+            elif any(p in report_lower for p in [
+                "normal", "no acute", "unremarkable", "clear lungs",
+                "lungs are clear", "no active disease", "within normal limits",
+                "no cardiopulmonary", "no radiographic abnormality",
+            ]):
                 detected_label = "Normal"
+            else:
+                detected_label = "Unknown"
 
             # Tag alignment relative to CNN prediction
             pred_lower = pred.lower()

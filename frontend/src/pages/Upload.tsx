@@ -44,6 +44,13 @@ export default function Upload() {
         setCurrentStep(0);
         setErrorMessage('');
 
+        // Convert to base64 for history storage
+        const imageDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+        });
+
         // Simulate pipeline steps visually while the API call runs
         const stepPromise = new Promise<void>((resolve) => {
             let step = 0;
@@ -70,7 +77,7 @@ export default function Upload() {
 
             // Ensure we show all steps complete
             setCurrentStep(PIPELINE_STEPS.length);
-            setResult(apiResult);
+            setResult(apiResult, imageDataUrl);
             setState('complete');
         } catch (err: any) {
             setErrorMessage(err.message || 'Analysis failed. Please try again.');

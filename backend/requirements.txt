@@ -6,9 +6,7 @@ uvicorn[standard]==0.30.0
 python-multipart==0.0.9
 python-dotenv==1.0.0
 
-# PyTorch
-torch
-torchvision
+# PyTorch — torch & torchvision are installed CPU-only via build.sh
 torchxrayvision==1.4.0
 
 # ML & Data

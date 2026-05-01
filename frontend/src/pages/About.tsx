@@ -7,7 +7,7 @@ import renukaAvatar from '../assets/renuka.png';
 
 const teamMembers = [
     { name: 'Kiran Krishna', role: 'ML & Backend', avatar: kiranAvatar },
-    { name: 'Aryan Aligeti', role: 'Frontend & UI', avatar: aryanAvatar },
+    { name: 'Aryan Aligeti', role: 'Frontend/UI and Integration', avatar: aryanAvatar },
     { name: 'Renuka Manohari', role: 'Research & Data', avatar: renukaAvatar },
 ];
 
@@ -137,7 +137,7 @@ export default function About() {
                 </div>
                 <div className="mt-6 pt-6 border-t border-white/10">
                     <p className="text-sm text-gray-400">
-                        <span className="font-medium text-white">Project Guide:</span> Prof. Ashok Kumar, Department of IDK
+                        <span className="font-medium text-white">Project Guide:</span> Prof. Ashok Kumar, Department of Artificial Intelligence & Machine Learning
                     </p>
                 </div>
             </motion.div>

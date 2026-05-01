@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, UploadCloud, Search, AlertTriangle, FileText, Info } from 'lucide-react';
+import { LayoutDashboard, UploadCloud, Search, AlertTriangle, FileText, Info, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
@@ -12,17 +12,31 @@ const navItems = [
     { path: '/about', label: 'About', icon: Info },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
     return (
-        <aside className="w-64 bg-card/50 backdrop-blur-xl border-r border-white/5 h-screen flex flex-col fixed left-0 top-0 z-20">
-            <div className="p-6 flex items-center gap-3 border-b border-white/5">
-                <div className="p-1 bg-indigo-500/20 rounded-lg overflow-hidden">
-                    <img src="/logo.png" alt="X-Ray Insight Logo" className="w-8 h-8 object-contain" />
+        <aside className={cn(
+            "w-64 bg-card/50 backdrop-blur-xl border-r border-white/5 h-screen flex flex-col fixed top-0 z-40 transition-transform duration-300",
+            "lg:translate-x-0 lg:left-0",
+            isOpen ? "translate-x-0 left-0" : "-translate-x-full left-0"
+        )}>
+            <div className="p-6 flex items-center justify-between border-b border-white/5">
+                <div className="flex items-center gap-3">
+                    <div className="p-1 bg-indigo-500/20 rounded-lg overflow-hidden">
+                        <img src="/logo.png" alt="X-Ray Insight Logo" className="w-8 h-8 object-contain" />
+                    </div>
+                    <div>
+                        <h1 className="font-bold text-lg text-white tracking-tight">X-Ray Insight</h1>
+                        <p className="text-xs text-muted-foreground">Clinical AI Assistant</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="font-bold text-lg text-white tracking-tight">X-Ray Insight</h1>
-                    <p className="text-xs text-muted-foreground">Clinical AI Assistant</p>
-                </div>
+                <button onClick={onClose} className="lg:hidden p-1 text-muted-foreground hover:text-white">
+                    <X className="w-5 h-5" />
+                </button>
             </div>
 
             <nav className="flex-1 p-4 space-y-1">
@@ -30,6 +44,7 @@ export function Sidebar() {
                     <NavLink
                         key={item.path}
                         to={item.path}
+                        onClick={onClose}
                         className={({ isActive }) =>
                             cn(
                                 "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden",

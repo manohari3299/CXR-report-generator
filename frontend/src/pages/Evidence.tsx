@@ -1,6 +1,6 @@
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, ChevronDown, X, FileText, TrendingUp, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronDown, X, TrendingUp, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 import { Link } from 'react-router-dom';
 import type { EvidenceCase } from '../types';

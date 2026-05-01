@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { X, Upload, User, Loader2 } from 'lucide-react';
 
@@ -18,7 +19,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
@@ -26,7 +27,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
