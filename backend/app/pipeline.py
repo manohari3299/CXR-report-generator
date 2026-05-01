@@ -75,7 +75,7 @@ print(f"[Pipeline] Config — Temperature: {TEMPERATURE}, TTA: {TTA_ENABLED}, "
 KEYWORDS = ["pneumonia", "effusion", "pneumothorax", "cardiomegaly", "atelectasis", "edema"]
 
 def is_keyword_present(keyword: str, text: str) -> bool:
-    \"\"\"Check if a keyword is present and NOT negated in the text.\"\"\"
+    """Check if a keyword is present and NOT negated in the text."""
     if keyword not in text:
         return False
     
