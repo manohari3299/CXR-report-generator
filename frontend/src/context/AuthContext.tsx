@@ -54,8 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
   const loginGoogle = async (googleToken: string) => {
-    const response = await fetch('http://localhost:8000/auth/google', {
+    const response = await fetch(`${API_BASE_URL}/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: googleToken }),
@@ -64,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginCustom = async (email: string, password: string) => {
-    const response = await fetch('http://localhost:8000/auth/login', {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -73,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const registerCustom = async (name: string, email: string, password: string) => {
-    const response = await fetch('http://localhost:8000/auth/register', {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
@@ -91,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       formData.append('file', file);
     }
 
-    const response = await fetch('http://localhost:8000/auth/update-profile', {
+    const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
       method: 'POST',
       // DO NOT set Content-Type for FormData, browser will set it with boundary
       body: formData,
