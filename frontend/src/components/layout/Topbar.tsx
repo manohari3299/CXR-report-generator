@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Search, User, LogOut, Settings, ChevronDown, Menu } from 'lucide-react';
+import { Search, User, LogOut, Settings, ChevronDown, Menu, Activity } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useAnalysis } from '../../context/AnalysisContext';
 import { ProfileModal } from './ProfileModal';
 
 interface TopbarProps {
@@ -9,6 +10,7 @@ interface TopbarProps {
 
 export function Topbar({ onMenuClick }: TopbarProps) {
     const { user, logout } = useAuth();
+    const { history } = useAnalysis();
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -41,13 +43,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button className="relative p-2 text-muted-foreground hover:text-white transition-colors">
-                        <Bell className="w-5 h-5" />
-                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full border-2 border-background"></span>
-                    </button>
-
-                    <div className="h-8 w-px bg-white/10"></div>
-
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -66,7 +61,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                             )}
                             <div className="text-left hidden md:block">
                                 <p className="text-sm font-medium text-white leading-tight">{user?.name || "User"}</p>
-                                <p className="text-xs text-muted-foreground">Radiologist</p>
+                                <p className="text-xs text-muted-foreground">{history.length} {history.length === 1 ? 'analysis' : 'analyses'}</p>
                             </div>
                             <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
@@ -76,6 +71,10 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                                 <div className="px-4 py-3 border-b border-white/10">
                                     <p className="text-sm font-medium text-white truncate">{user?.name}</p>
                                     <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                                </div>
+                                <div className="px-4 py-2.5 border-b border-white/10 flex items-center gap-2">
+                                    <Activity className="w-3.5 h-3.5 text-indigo-400" />
+                                    <span className="text-xs text-muted-foreground">{history.length} total {history.length === 1 ? 'analysis' : 'analyses'}</span>
                                 </div>
                                 <div className="py-1">
                                     <button

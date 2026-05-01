@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { X, Upload, User, Loader2 } from 'lucide-react';
+import { useAnalysis } from '../../context/AnalysisContext';
+import { X, Upload, User, Loader2, Activity, Clock, FileText } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface ProfileModalProps {
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const { user, updateProfile } = useAuth();
+  const { history } = useAnalysis();
   const [name, setName] = useState(user?.name || '');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(user?.picture_url || null);
@@ -83,13 +85,36 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-white">Display Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white">Email</label>
+            <p className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-muted-foreground text-sm">{user?.email}</p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+              <Activity className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
+              <p className="text-lg font-bold text-white">{history.length}</p>
+              <p className="text-[10px] text-muted-foreground">Analyses</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+              <FileText className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
+              <p className="text-lg font-bold text-white">{history.filter(h => h.result.report).length}</p>
+              <p className="text-[10px] text-muted-foreground">Reports</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+              <Clock className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
+              <p className="text-lg font-bold text-white">{history.length > 0 ? new Date(history[0].timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</p>
+              <p className="text-[10px] text-muted-foreground">Last Active</p>
+            </div>
           </div>
 
           <div className="pt-4 flex justify-end gap-3">
