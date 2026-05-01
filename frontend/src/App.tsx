@@ -2,6 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { AnimatePresence, motion } from 'framer-motion';
 import { Layout } from './components/layout/Layout';
 import { AnalysisProvider } from './context/AnalysisContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 import Overview from './pages/Overview';
 import Upload from './pages/Upload';
 import Evidence from './pages/Evidence';
@@ -15,13 +18,38 @@ const pageVariants = {
   exit: { opacity: 0, y: -10 },
 };
 
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
 
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Layout />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
           <Route index element={
             <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.2 }}>
               <Overview />
@@ -61,11 +89,13 @@ function AnimatedRoutes() {
 
 function App() {
   return (
-    <AnalysisProvider>
-      <Router>
-        <AnimatedRoutes />
-      </Router>
-    </AnalysisProvider>
+    <AuthProvider>
+      <AnalysisProvider>
+        <Router>
+          <AnimatedRoutes />
+        </Router>
+      </AnalysisProvider>
+    </AuthProvider>
   );
 }
 
