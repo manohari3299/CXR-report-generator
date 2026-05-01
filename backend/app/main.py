@@ -9,6 +9,7 @@ Endpoints:
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
+import asyncio
 import io
 
 from .pipeline import process_image
@@ -68,8 +69,8 @@ async def predict(file: UploadFile = File(...)):
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("L")
 
-        # Run pipeline
-        result = process_image(image)
+        # Run pipeline in a thread to avoid blocking the event loop
+        result = await asyncio.to_thread(process_image, image)
         return result
 
     except ValueError as e:

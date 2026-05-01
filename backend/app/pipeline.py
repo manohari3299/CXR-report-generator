@@ -25,6 +25,7 @@ FAISS_INDEX_PATH = os.getenv('FAISS_INDEX_PATH')
 RETRIEVAL_METADATA_JSON = os.getenv('RETRIEVAL_METADATA_JSON')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 GEMINI_API_KEY_2 = os.getenv('GEMINI_API_KEY_2')
+GEMINI_API_KEY_3 = os.getenv('GEMINI_API_KEY_3')
 TOP_K = int(os.getenv('TOP_K', '5'))
 CNN_THRESHOLD = float(os.getenv('CNN_THRESHOLD', '0.2'))
 LABELS = eval(os.getenv('LABELS', '["Atelectasis","Cardiomegaly","Effusion","Pneumonia","Pneumothorax","Edema","No Finding"]'))
@@ -68,6 +69,8 @@ if GEMINI_API_KEY:
     clients.append(genai.Client(api_key=GEMINI_API_KEY))
 if GEMINI_API_KEY_2:
     clients.append(genai.Client(api_key=GEMINI_API_KEY_2))
+if GEMINI_API_KEY_3:
+    clients.append(genai.Client(api_key=GEMINI_API_KEY_3))
 print(f"[Pipeline] {len(clients)} Gemini client(s) ready.")
 
 print(f"[Pipeline] Config — Temperature: {TEMPERATURE}, TTA: {TTA_ENABLED}, "
