@@ -4,9 +4,10 @@
 import time
 
 # Models to try in order — fallback if the primary is overloaded
-GEMINI_MODELS = ["gemini-1.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
-MAX_RETRIES = 3
-RETRY_DELAY = 2  # seconds (doubles each retry)
+GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
+MAX_RETRIES = 1
+RETRY_DELAY = 1
+MAX_TOTAL_SECONDS = 20
 
 
 def generate_report(clients: list, data: dict) -> str:
@@ -62,11 +63,21 @@ IMPRESSION:
     for r in reports:
         prompt += f"\n{r}\n"
 
-    # Try each client (API key) and each model
+    # Try each client (API key) and each model, with a hard wall-clock cap
     last_error = None
+    start_time = time.monotonic()
+    timed_out = False
     for client_idx, client in enumerate(clients):
+        if timed_out:
+            break
         for model_name in GEMINI_MODELS:
+            if timed_out:
+                break
             for attempt in range(MAX_RETRIES):
+                if time.monotonic() - start_time >= MAX_TOTAL_SECONDS:
+                    print(f"[ReportGen] Total timeout ({MAX_TOTAL_SECONDS}s) exceeded, falling back.")
+                    timed_out = True
+                    break
                 try:
                     print(f"[ReportGen] Key {client_idx + 1}: Trying {model_name} (attempt {attempt + 1}/{MAX_RETRIES})...")
                     response = client.models.generate_content(
@@ -83,7 +94,6 @@ IMPRESSION:
                         print(f"[ReportGen] Key {client_idx + 1} {model_name} overloaded/exhausted, retrying in {wait}s...")
                         time.sleep(wait)
                     else:
-                        # Non-transient error, break retry loop for this model
                         print(f"[ReportGen] Key {client_idx + 1} {model_name} failed: {error_str}")
                         break
 
