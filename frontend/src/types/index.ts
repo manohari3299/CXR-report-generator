@@ -9,6 +9,7 @@ export interface EvidenceCase {
   weight: number;
   report_snippet: string;
   label: string;
+  alignment: 'supports' | 'conflicts' | 'neutral';
   disagreement_score: number;
 }
 

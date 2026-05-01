@@ -1,11 +1,19 @@
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { AlertTriangle, Scale, Trash2, RotateCcw, CheckCircle, XCircle, Info } from 'lucide-react';
+import { AlertTriangle, Scale, Trash2, RotateCcw, CheckCircle, XCircle, Info, Brain, ShieldCheck, ShieldAlert, ShieldQuestion } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 import { Link } from 'react-router-dom';
 import type { EvidenceCase } from '../types';
 
+const alignmentConfig = {
+    supports: { label: 'Supports', color: 'emerald', Icon: ShieldCheck },
+    conflicts: { label: 'Conflicts', color: 'red', Icon: ShieldAlert },
+    neutral: { label: 'Neutral', color: 'gray', Icon: ShieldQuestion },
+};
+
 function MiniEvidenceCard({ caseData, isPruned }: { caseData: EvidenceCase; isPruned: boolean }) {
+    const align = alignmentConfig[caseData.alignment] || alignmentConfig.neutral;
+
     return (
         <motion.div
             layout
@@ -22,13 +30,19 @@ function MiniEvidenceCard({ caseData, isPruned }: { caseData: EvidenceCase; isPr
             )}
             <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-mono text-gray-500">Case #{caseData.rank}</span>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                    caseData.label === 'Normal' ? 'bg-emerald-500/20 text-emerald-400' :
-                    caseData.disagreement_score > 0.5 ? 'bg-red-500/20 text-red-400' :
-                    'bg-amber-500/20 text-amber-400'
-                }`}>
-                    {caseData.label}
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        caseData.label === 'Normal' ? 'bg-emerald-500/20 text-emerald-400' :
+                        caseData.alignment === 'conflicts' ? 'bg-red-500/20 text-red-400' :
+                        caseData.alignment === 'supports' ? 'bg-emerald-500/20 text-emerald-400' :
+                        'bg-amber-500/20 text-amber-400'
+                    }`}>
+                        {caseData.label}
+                    </span>
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-${align.color}-500/10 text-${align.color}-400 border border-${align.color}-500/20`}>
+                        {align.label}
+                    </span>
+                </div>
             </div>
             <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -69,20 +83,16 @@ export default function Disagreement() {
             }
         });
 
-        // Calculate label distribution for consensus
-        const labelCounts: Record<string, number> = {};
-        keptCases.forEach(c => {
-            labelCounts[c.label] = (labelCounts[c.label] || 0) + 1;
-        });
-        const majorityLabel = Object.entries(labelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Unknown';
-        const agreementRatio = keptCases.length > 0
-            ? (labelCounts[majorityLabel] || 0) / keptCases.length
-            : 0;
+        // Count how many kept cases support the CNN prediction
+        const supporting = keptCases.filter(c => c.alignment === 'supports').length;
+        const conflicting = keptCases.filter(c => c.alignment === 'conflicts').length;
+        const neutral = keptCases.filter(c => c.alignment === 'neutral').length;
+        const agreementRatio = keptCases.length > 0 ? supporting / keptCases.length : 0;
 
         return {
             kept: keptCases,
             pruned: prunedCases,
-            stats: { majorityLabel, agreementRatio, totalKept: keptCases.length, totalPruned: prunedCases.length }
+            stats: { supporting, conflicting, neutral, agreementRatio, totalKept: keptCases.length, totalPruned: prunedCases.length }
         };
     }, [evidence, threshold]);
 
@@ -127,25 +137,50 @@ export default function Disagreement() {
             <div>
                 <h2 className="text-3xl font-bold text-white tracking-tight">Disagreement Resolution</h2>
                 <p className="text-gray-400 mt-1">
-                    Analyzing evidence for <span className="text-indigo-400 font-semibold">{result.prediction}</span> prediction.
+                    Evidence alignment for CNN prediction: <span className="text-indigo-400 font-semibold">{result.prediction}</span>
+                    <span className="text-gray-500 ml-2">({(result.confidence * 100).toFixed(1)}% confidence)</span>
                     {result.disagreement && <span className="text-amber-400 ml-2">⚠️ Disagreement detected</span>}
                 </p>
             </div>
+
+            {/* CNN Prediction Anchor Card */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl p-5"
+            >
+                <div className="flex items-start gap-4">
+                    <div className="p-3 bg-indigo-500/20 rounded-xl">
+                        <Brain className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <div className="flex-1">
+                        <h4 className="font-semibold text-white mb-1">CNN Prediction (Authoritative Diagnosis)</h4>
+                        <p className="text-2xl font-bold text-indigo-300">{result.prediction}</p>
+                        <p className="text-sm text-indigo-200/60 mt-1">
+                            All evidence cases below are evaluated relative to this CNN prediction.
+                            Cases that agree are marked <span className="text-emerald-400 font-medium">Supports</span>,
+                            those with different findings are marked <span className="text-red-400 font-medium">Conflicts</span>,
+                            and unclear cases are <span className="text-gray-400 font-medium">Neutral</span>.
+                        </p>
+                    </div>
+                </div>
+            </motion.div>
 
             {/* Explanation Card */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
                 className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-5"
             >
                 <div className="flex items-start gap-3">
                     <Info className="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0" />
                     <div>
-                        <h4 className="font-semibold text-indigo-300 mb-1">Why Disagreement Happens</h4>
+                        <h4 className="font-semibold text-indigo-300 mb-1">How This Works</h4>
                         <p className="text-sm text-indigo-200/70 leading-relaxed">
-                            Retrieved evidence cases may conflict due to overlapping disease presentations, noisy training labels,
-                            or embedding proximity in ambiguous regions. By pruning low-weight and high-disagreement cases,
-                            we ensure the generated report reflects a confident consensus.
+                            The system retrieves similar cases from a database of 66,000+ reports. Some retrieved cases may mention
+                            different conditions than what the CNN detected. By pruning low-weight and conflicting evidence,
+                            we ensure the generated report reflects a confident consensus aligned with the CNN prediction.
                         </p>
                     </div>
                 </div>
@@ -242,7 +277,7 @@ export default function Disagreement() {
                     className="bg-white/5 border border-white/10 rounded-2xl p-6"
                 >
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-white">Consensus Findings</h3>
+                        <h3 className="text-lg font-semibold text-white">Consensus Analysis</h3>
                         <span className={`text-sm ${hasPruned ? 'text-emerald-400' : 'text-gray-400'}`}>
                             {hasPruned ? `${stats.totalKept} retained` : 'Awaiting pruning'}
                         </span>
@@ -259,14 +294,31 @@ export default function Disagreement() {
                                 <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <CheckCircle className="w-5 h-5 text-emerald-400" />
-                                        <span className="font-semibold text-emerald-300">Consensus Reached</span>
+                                        <span className="font-semibold text-emerald-300">
+                                            {stats.agreementRatio >= 0.5 ? 'Consensus Supports CNN' : 'Weak Consensus'}
+                                        </span>
                                     </div>
                                     <p className="text-sm text-emerald-200/70">
-                                        Majority finding: <span className="font-semibold text-white">{stats.majorityLabel}</span>
+                                        CNN Prediction: <span className="font-semibold text-white">{result.prediction}</span>
                                     </p>
                                     <p className="text-sm text-emerald-200/70">
-                                        Agreement ratio: <span className="font-semibold text-white">{(stats.agreementRatio * 100).toFixed(0)}%</span>
+                                        Evidence agreement: <span className="font-semibold text-white">{(stats.agreementRatio * 100).toFixed(0)}%</span> of retained cases support this diagnosis
                                     </p>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
+                                        <p className="text-2xl font-bold text-emerald-400">{stats.supporting}</p>
+                                        <p className="text-xs text-emerald-300/70">Supporting</p>
+                                    </div>
+                                    <div className="bg-gray-500/10 border border-gray-500/20 rounded-xl p-4 text-center">
+                                        <p className="text-2xl font-bold text-gray-400">{stats.neutral}</p>
+                                        <p className="text-xs text-gray-300/70">Neutral</p>
+                                    </div>
+                                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center">
+                                        <p className="text-2xl font-bold text-red-400">{stats.conflicting}</p>
+                                        <p className="text-xs text-red-300/70">Conflicting</p>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
@@ -282,8 +334,10 @@ export default function Disagreement() {
 
                                 <div className="bg-black/30 rounded-xl p-4">
                                     <p className="text-sm text-gray-300 font-mono leading-relaxed">
-                                        <span className="text-indigo-400">Suggested phrasing:</span> "Based on {stats.totalKept} high-confidence
-                                        evidence cases with {(stats.agreementRatio * 100).toFixed(0)}% agreement, findings suggest {stats.majorityLabel.toLowerCase()}."
+                                        <span className="text-indigo-400">Summary:</span> Based on {stats.totalKept} retained
+                                        evidence cases, {stats.supporting} support the CNN diagnosis of <span className="text-white font-semibold">{result.prediction}</span>.
+                                        {stats.conflicting > 0 && ` ${stats.conflicting} case(s) suggest alternative findings — clinical correlation advised.`}
+                                        {stats.conflicting === 0 && ' No conflicting evidence remains after pruning.'}
                                     </p>
                                 </div>
                             </motion.div>

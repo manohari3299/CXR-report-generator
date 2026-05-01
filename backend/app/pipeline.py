@@ -74,6 +74,21 @@ print(f"[Pipeline] Config — Temperature: {TEMPERATURE}, TTA: {TTA_ENABLED}, "
 # Disease keywords used for voting
 KEYWORDS = ["pneumonia", "effusion", "pneumothorax", "cardiomegaly", "atelectasis", "edema"]
 
+def is_keyword_present(keyword: str, text: str) -> bool:
+    \"\"\"Check if a keyword is present and NOT negated in the text.\"\"\"
+    if keyword not in text:
+        return False
+    
+    # Simple negation window check
+    parts = text.split(keyword)
+    for i in range(len(parts) - 1):
+        before = parts[i][-50:]  # Look at 50 chars before the keyword
+        # Check common negation patterns
+        if any(neg in before for neg in ['no ', 'without ', 'not ', 'no pleural ', 'no evidence of ']):
+            continue
+        return True # Found a non-negated instance
+    return False
+
 
 # =========================
 # PIPELINE
@@ -166,18 +181,29 @@ def process_image(image: Image.Image) -> dict:
             report_text = meta.get("report", "")
             reports.append(report_text)
 
-            # Compute weight: inverse distance (higher = more similar)
-            weight = 1.0 / (dist + 1e-6)
+            # Since FAISS index is IndexFlatIP (Inner Product), dist is already cosine similarity (higher is better).
+            # Clip between 0 and 1 for safety.
+            sim = min(max(float(dist), 0.0), 1.0)
+            weight = sim
 
             # Detect label from report content
             detected_label = "Unknown"
             report_lower = report_text.lower()
             for kw in KEYWORDS:
-                if kw in report_lower:
+                if is_keyword_present(kw, report_lower):
                     detected_label = kw.capitalize()
                     break
-            if detected_label == "Unknown" and ("normal" in report_lower or "no acute" in report_lower):
+            if detected_label == "Unknown" and ("normal" in report_lower or "no acute" in report_lower or "clear" in report_lower):
                 detected_label = "Normal"
+
+            # Tag alignment relative to CNN prediction
+            pred_lower = pred.lower()
+            if detected_label.lower() == pred_lower:
+                alignment = "supports"
+            elif detected_label in ("Normal", "Unknown"):
+                alignment = "neutral"
+            else:
+                alignment = "conflicts"
 
             # Snippet: first 150 chars of report
             snippet = report_text[:150].strip()
@@ -186,11 +212,12 @@ def process_image(image: Image.Image) -> dict:
 
             evidence_cases.append({
                 "rank": rank + 1,
-                "similarity": round(float(1.0 - dist) if dist <= 1 else float(1.0 / (1.0 + dist)), 4),
+                "similarity": round(sim, 4),
                 "distance": round(float(dist), 6),
                 "weight": round(float(weight), 4),
                 "report_snippet": snippet,
                 "label": detected_label,
+                "alignment": alignment,
             })
 
     # Normalize weights to [0, 1] range
@@ -207,7 +234,7 @@ def process_image(image: Image.Image) -> dict:
     for r in reports:
         r_lower = r.lower()
         for k in KEYWORDS:
-            if k in r_lower:
+            if is_keyword_present(k, r_lower):
                 votes.append(k)
 
     vote_counts = Counter(votes)
@@ -218,15 +245,12 @@ def process_image(image: Image.Image) -> dict:
     if len(common) > 1 and common[0][1] - common[1][1] <= 1:
         disagreement = True
 
-    # Compute per-case disagreement scores
-    majority_label = common[0][0] if common else ""
+    # Compute per-case disagreement scores anchored to CNN prediction
     for e in evidence_cases:
-        if e["label"].lower() == majority_label:
+        if e["alignment"] == "supports":
             e["disagreement_score"] = 0.1
-        elif e["label"] == "Normal":
+        elif e["alignment"] == "neutral":
             e["disagreement_score"] = 0.3
-        elif e["label"] == "Unknown":
-            e["disagreement_score"] = 0.5
         else:
             e["disagreement_score"] = 0.7
 
@@ -241,8 +265,8 @@ def process_image(image: Image.Image) -> dict:
         similarities = []
         for e in evidence_cases:
             d = e["distance"]
-            # L2 distance -> similarity: exp(-d) gives [0, 1] range
-            sim = float(np.exp(-d))
+            # Since distance is already inner product (similarity), use it directly
+            sim = min(max(float(d), 0.0), 1.0)
             similarities.append(sim)
         # Weighted average: closer neighbors count more
         total_sim = sum(similarities)

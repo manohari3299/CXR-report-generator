@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Activity, FileCheck, AlertCircle, ArrowRight, Brain, Database, Scale, FileText, UploadCloud } from 'lucide-react';
+import { Activity, FileCheck, AlertCircle, ArrowRight, Brain, Database, Scale, FileText, UploadCloud, Clock, Eye } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 
 export default function Overview() {
-    const { result } = useAnalysis();
+    const { result, history, loadFromHistory } = useAnalysis();
 
     return (
         <div className="space-y-8">
@@ -124,6 +124,51 @@ export default function Overview() {
                     )}
                 </motion.div>
             </div>
+
+            {/* Analysis History */}
+            {history.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="bg-white/[0.03] backdrop-blur-md border border-white/5 rounded-3xl p-6"
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-indigo-400" />
+                            Recent Analyses
+                        </h3>
+                        <Link to="/reports" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                            View all →
+                        </Link>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {history.slice(0, 4).map((entry) => {
+                            const date = new Date(entry.timestamp);
+                            const timeAgo = getTimeAgo(date);
+                            return (
+                                <button
+                                    key={entry.id}
+                                    onClick={() => loadFromHistory(entry.id)}
+                                    className="text-left bg-white/5 border border-white/10 rounded-xl p-3 hover:border-indigo-500/30 hover:bg-white/[0.08] transition-all group"
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-sm font-semibold text-white">{entry.result.prediction}</span>
+                                        <Eye className="w-3.5 h-3.5 text-gray-600 group-hover:text-indigo-400 transition-colors" />
+                                    </div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${entry.result.confidence * 100}%` }} />
+                                        </div>
+                                        <span className="text-[10px] text-emerald-400">{(entry.result.confidence * 100).toFixed(0)}%</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500">{timeAgo}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+            )}
         </div>
     );
 }
@@ -147,4 +192,18 @@ function MetricCard({ title, value, icon: Icon, delay, warning }: any) {
             </div>
         </motion.div>
     );
+}
+
+function getTimeAgo(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHr = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHr < 24) return `${diffHr}h ago`;
+    if (diffDay < 7) return `${diffDay}d ago`;
+    return date.toLocaleDateString();
 }

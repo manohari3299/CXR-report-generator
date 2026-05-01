@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useRef, useCallback } from 'react';
-import { UploadCloud, Loader2, CheckCircle2, Brain, Database, Scale, AlertTriangle, FileText, XCircle } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { UploadCloud, Loader2, CheckCircle2, Brain, Database, Scale, AlertTriangle, FileText, XCircle, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { predictImage } from '../services/api';
 import { useAnalysis } from '../context/AnalysisContext';
@@ -17,14 +17,24 @@ const PIPELINE_STEPS = [
 ];
 
 export default function Upload() {
-    const [state, setState] = useState<AnalysisState>('idle');
-    const [currentStep, setCurrentStep] = useState(0);
+    const { result, setResult, clearResult, setIsAnalyzing } = useAnalysis();
+
+    // If there's an existing result, start in 'complete' state
+    const [state, setState] = useState<AnalysisState>(result ? 'complete' : 'idle');
+    const [currentStep, setCurrentStep] = useState(result ? PIPELINE_STEPS.length : 0);
     const [isDragOver, setIsDragOver] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
-    const { setResult, setIsAnalyzing } = useAnalysis();
+
+    // Sync state if result changes externally (e.g. loading from history)
+    useEffect(() => {
+        if (result) {
+            setState('complete');
+            setCurrentStep(PIPELINE_STEPS.length);
+        }
+    }, [result]);
 
     const runAnalysis = useCallback(async (file: File) => {
         // Create preview
@@ -53,19 +63,18 @@ export default function Upload() {
 
         try {
             // Run API call and step animation in parallel
-            const [result] = await Promise.all([
+            const [apiResult] = await Promise.all([
                 predictImage(file),
                 stepPromise,
             ]);
 
             // Ensure we show all steps complete
             setCurrentStep(PIPELINE_STEPS.length);
-            setResult(result);
+            setResult(apiResult);
             setState('complete');
         } catch (err: any) {
             setErrorMessage(err.message || 'Analysis failed. Please try again.');
             setState('error');
-            setResult(null);
         } finally {
             setIsAnalyzing(false);
         }
@@ -103,15 +112,28 @@ export default function Upload() {
         setCurrentStep(0);
         setPreviewUrl(null);
         setErrorMessage('');
-        setResult(null);
+        clearResult();
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     return (
         <div className="space-y-8">
-            <div>
-                <h2 className="text-3xl font-bold text-white tracking-tight">Upload & Analysis</h2>
-                <p className="text-gray-400 mt-1">Upload a chest X-ray image to generate an evidence-grounded report.</p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h2 className="text-3xl font-bold text-white tracking-tight">Upload & Analysis</h2>
+                    <p className="text-gray-400 mt-1">Upload a chest X-ray image to generate an evidence-grounded report.</p>
+                </div>
+                {state === 'complete' && (
+                    <motion.button
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={resetAnalysis}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition-all"
+                    >
+                        <RotateCcw className="w-4 h-4" />
+                        New Analysis
+                    </motion.button>
+                )}
             </div>
 
             <input
@@ -191,6 +213,7 @@ export default function Upload() {
                                         <CheckCircle2 className="w-8 h-8 text-emerald-400" />
                                     </div>
                                     <p className="text-lg font-medium text-emerald-400">Analysis Complete!</p>
+                                    <p className="text-sm text-gray-500">Results are saved. Navigate freely — your analysis will persist.</p>
                                 </motion.div>
                             )}
                             {state === 'error' && (
@@ -212,14 +235,14 @@ export default function Upload() {
                         </AnimatePresence>
                     </div>
 
-                    {(state === 'complete' || state === 'error') && (
+                    {state === 'error' && (
                         <motion.button
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             onClick={resetAnalysis}
                             className="mt-4 w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-colors"
                         >
-                            Run New Analysis
+                            Try Again
                         </motion.button>
                     )}
                 </motion.div>

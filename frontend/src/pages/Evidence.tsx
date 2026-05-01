@@ -1,6 +1,6 @@
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, ChevronDown, X, FileText, TrendingUp, AlertCircle } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronDown, X, FileText, TrendingUp, AlertCircle, ShieldCheck, ShieldAlert, ShieldQuestion } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
 import { Link } from 'react-router-dom';
 import type { EvidenceCase } from '../types';
@@ -42,9 +42,23 @@ function EvidenceCard({ caseData, index }: { caseData: EvidenceCase; index: numb
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-mono text-gray-500">Case #{caseData.rank}</span>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${labelColors[caseData.label] || labelColors.Unknown}`}>
-                            {caseData.label}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${labelColors[caseData.label] || labelColors.Unknown}`}>
+                                {caseData.label}
+                            </span>
+                            {caseData.alignment && (
+                                <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                    caseData.alignment === 'supports' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    caseData.alignment === 'conflicts' ? 'bg-red-500/20 text-red-400' :
+                                    'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                    {caseData.alignment === 'supports' && <ShieldCheck className="w-3 h-3" />}
+                                    {caseData.alignment === 'conflicts' && <ShieldAlert className="w-3 h-3" />}
+                                    {caseData.alignment === 'neutral' && <ShieldQuestion className="w-3 h-3" />}
+                                    {caseData.alignment.charAt(0).toUpperCase() + caseData.alignment.slice(1)}
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     {/* Metrics */}
