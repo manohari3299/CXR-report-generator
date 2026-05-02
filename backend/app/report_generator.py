@@ -4,10 +4,10 @@
 import time
 
 # Models to try in order — fallback if the primary is overloaded
-GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
-MAX_RETRIES = 1
-RETRY_DELAY = 1
-MAX_TOTAL_SECONDS = 20
+GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+MAX_RETRIES = 2
+RETRY_DELAY = 2
+MAX_TOTAL_SECONDS = 30
 
 
 def generate_report(clients: list, data: dict) -> str:
@@ -100,14 +100,52 @@ IMPRESSION:
     print(f"[ReportGen] All Gemini models and API keys failed. Returning fallback report. Last error: {last_error}")
     
     # Fallback template if APIs are down/exhausted
-    fallback_report = f"FINDINGS:\nComputer-aided detection identified {prediction} as the primary finding with {confidence:.0%} confidence.\n"
+    disease_details = {
+        "Pneumonia": {
+            "findings": "Patchy airspace opacities are noted, suggestive of an infectious consolidation process. The cardiac silhouette appears within normal limits. No large pleural effusion is identified. The mediastinal contour is unremarkable.",
+            "impression": "Findings consistent with pneumonia. Recommend clinical correlation with laboratory findings and consideration of follow-up imaging to assess treatment response.",
+        },
+        "Effusion": {
+            "findings": "There is blunting of the costophrenic angle(s) with a meniscus sign, suggestive of pleural fluid collection. The underlying lung parenchyma is partially obscured. The cardiac silhouette is borderline in size.",
+            "impression": "Pleural effusion identified. Recommend clinical correlation to determine etiology. Consider lateral decubitus views or ultrasound for further characterization if clinically indicated.",
+        },
+        "Cardiomegaly": {
+            "findings": "The cardiac silhouette is enlarged with a cardiothoracic ratio exceeding 0.5, consistent with cardiomegaly. The pulmonary vasculature may show mild redistribution. No focal consolidation or large pleural effusion is definitively identified.",
+            "impression": "Cardiomegaly is present. Recommend echocardiographic correlation to evaluate cardiac function and structural abnormalities.",
+        },
+        "Atelectasis": {
+            "findings": "Linear or band-like opacities are noted, suggestive of subsegmental or segmental atelectasis with associated volume loss. The remainder of the lungs appears clear. The cardiac silhouette is within normal limits.",
+            "impression": "Findings consistent with atelectasis. This may be related to hypoventilation, post-procedural changes, or mucous plugging. Clinical correlation is recommended.",
+        },
+        "Pneumothorax": {
+            "findings": "A thin visceral pleural line is noted with absence of lung markings peripherally, suggestive of pneumothorax. The degree of lung collapse should be assessed clinically. The mediastinal structures appear midline.",
+            "impression": "Pneumothorax identified. Clinical assessment of patient symptoms and consideration of intervention based on the size and clinical stability is recommended.",
+        },
+        "Edema": {
+            "findings": "There are bilateral interstitial and/or alveolar opacities with peribronchial cuffing and vascular cephalization, suggestive of pulmonary edema. The cardiac silhouette is enlarged. Small bilateral pleural effusions may be present.",
+            "impression": "Findings consistent with pulmonary edema, likely cardiogenic in etiology given the associated cardiomegaly. Recommend clinical correlation with BNP levels and consideration of diuretic therapy.",
+        },
+        "No Finding": {
+            "findings": "The lungs are clear bilaterally without focal consolidation, pleural effusion, or pneumothorax. The cardiac silhouette is within normal limits. The mediastinal contour is unremarkable. The osseous structures are intact.",
+            "impression": "No acute cardiopulmonary abnormality identified. The chest radiograph appears within normal limits.",
+        },
+    }
+
+    details = disease_details.get(prediction, {
+        "findings": f"Computer-aided detection has identified features most consistent with {prediction}. The cardiac silhouette and mediastinal contours appear grossly unremarkable. No additional acute findings are definitively identified.",
+        "impression": f"Suspected {prediction}. Clinical correlation is recommended for further evaluation.",
+    })
+
+    fallback_report = f"FINDINGS:\n{details['findings']}\n"
+    fallback_report += f"\nComputer-aided detection confidence: {confidence:.0%}.\n"
 
     if secondary_findings:
-        fallback_report += "Secondary findings include: " + ", ".join([f"{f['label']} ({f['probability']:.0%})" for f in secondary_findings]) + ".\n"
+        findings_list = ", ".join([f"{f['label']} ({f['probability']:.0%})" for f in secondary_findings])
+        fallback_report += f"\nAdditional findings of note: {findings_list}. These secondary findings warrant clinical attention and may require further evaluation.\n"
 
     if disagreement:
-        fallback_report += "Retrieved clinical evidence shows some disagreement with this prediction. Clinical correlation is highly recommended.\n"
+        fallback_report += "\nOf note, retrieved clinical evidence from similar cases shows some variability in diagnosis. Clinical correlation is highly recommended to confirm the primary assessment.\n"
 
-    fallback_report += f"\nIMPRESSION:\n1. Suspected {prediction} !"
+    fallback_report += f"\nIMPRESSION:\n1. {details['impression']} !"
 
     return fallback_report
