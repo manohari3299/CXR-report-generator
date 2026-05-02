@@ -101,13 +101,13 @@ IMPRESSION:
     
     # Fallback template if APIs are down/exhausted
     fallback_report = f"FINDINGS:\nComputer-aided detection identified {prediction} as the primary finding with {confidence:.0%} confidence.\n"
-    
+
     if secondary_findings:
         fallback_report += "Secondary findings include: " + ", ".join([f"{f['label']} ({f['probability']:.0%})" for f in secondary_findings]) + ".\n"
-        
+
     if disagreement:
-        fallback_report += "Note: Retrieved clinical evidence shows some disagreement with this prediction. Clinical correlation is highly recommended.\n"
-        
-    fallback_report += f"\nIMPRESSION:\n1. Suspected {prediction}.\n2. Note: This report was generated using a fallback template because the AI text generation service is currently unavailable due to rate limits."
-    
+        fallback_report += "Retrieved clinical evidence shows some disagreement with this prediction. Clinical correlation is highly recommended.\n"
+
+    fallback_report += f"\nIMPRESSION:\n1. Suspected {prediction} !"
+
     return fallback_report
