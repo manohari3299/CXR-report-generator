@@ -194,9 +194,9 @@ Analyze a chest X-ray image.
 
 ## 👥 Team
 
-- **Kiran Krishna** — ML & Backend
-- **Aryan Aligeti** — Frontend & UI
-- **Renuka Manohari** — Research & Data
+- **Kiran Krishna** 
+- **Aryan Aligeti** 
+- **Renuka Manohari** 
 
 ## 📄 License
 
